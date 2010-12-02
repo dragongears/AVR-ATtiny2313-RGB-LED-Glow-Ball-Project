@@ -173,7 +173,7 @@ int main(void) {
 			}
 		}
 
-		// Get the state of the bottons on Port D
+		// Get the state of the buttons on Port D
 		pollButtons();
 
 		// If mode button is pressed, change mode
