@@ -1,0 +1,10 @@
+rgb - A small ATtiny2313 program to control an RGB LED connected to pins 0-2 of PORTB
+
+Art Dahm
+art@dahm.com
+
+11-23-2010
+
+Switches on pins 0 and 1 of PORTD control the behavior of the LED
+
+The default behavior is to slowly change colors. Alternate behavior is to show a single color which can be selected.
