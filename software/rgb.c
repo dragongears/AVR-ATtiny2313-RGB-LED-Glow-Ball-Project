@@ -39,16 +39,50 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "rgb.h"
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdlib.h>
+
+#define nop() asm volatile ("nop")
+#define NUMBER_OF_PWMS 3		// One PWM for each pin of an RGB LED
+#define BLINK_RATE 0x4fff		// Rate to blink LED to show speed change
+#define BLINK_DELAY 0xcfff	// Wait time before returning to changing color after blinking
+
+#define BUTTON_MODE 0b00000001			// Changing colors/Single color button
+#define BUTTON_CHANGE 0b00000010		// Speed/Color button
+#define BUTTONS_CURRENT PIND & 0b00000011 	// Actual state of button register
+
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// Global Variables
+uint8_t pwms[NUMBER_OF_PWMS];	// One PWM for each pin of an RGB LED
+
+uint8_t pollState;				// The current state of the buttons after calling pollButtons()
+uint8_t pressedButtons;		// Buttons whose state has changed to pressed since the last call to pollButtons()
+uint8_t releasedButtons;	// Buttons whose state has changed to released since the last call to pollButtons()
+uint8_t pollStatePrev;		// The previous state of the buttons before calling pollButtons()
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Function Prototypes
+int main(void);
+void delay(uint16_t);	// A short delay
+void initButtons(void);	// Initialize registers and variables for the hardware buttons
+void pollButtons(void);	// Get the state of the hardware buttons
+void setColor(uint8_t); // Turn each of the RGB LEDs on or off
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Timer Interrupt
 
 ISR(TIMER0_OVF_vect)	//timer 0 interrupt for the pwm core.
 {
 	uint8_t temp;
 
 	static uint8_t count;	// PWM count
-	static uint8_t out;		// Value to output to Port B
+	uint8_t out;		// Value to output to Port B
 
 	count++;
 	out = 0;
@@ -104,7 +138,7 @@ void delay(uint16_t a) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void setColor(void) {
+void setColor(uint8_t color) {
 	pwms[0] = (color & 0b00000001)?0x00:0xff;
 	pwms[1] = (color & 0b00000010)?0x00:0xff;
 	pwms[2] = (color & 0b00000100)?0x00:0xff;
@@ -114,9 +148,13 @@ void setColor(void) {
 
 int main(void) {
 	// declare variables
-	uint8_t temp;
+	uint8_t mode = 0;					// 0 = change, 1= single
+	uint8_t color = 0x01;			// Color when in Single Color mode
+	uint8_t speed = 0;				// Speed when in Changing Color mode
+
   uint8_t newpwms[NUMBER_OF_PWMS];	// Colors to work towards
 	uint8_t done;											// Count the number of PWMs that have reached newpwms. 3 = done
+	uint8_t temp;
 
 	// Set up data direction register for Port B
 	DDRB |= 0b00000111;
@@ -139,7 +177,7 @@ int main(void) {
 
 	// Main loop
 	while(1) {
-		// Color change delay. Also button debounce
+		// Color change delay. Also button debounce.
 		delay(speed);
 
 		// if Changing Color mode
@@ -181,7 +219,7 @@ int main(void) {
 			mode ^= 1;
 			// If solid color mode, set color
 			if (mode) {
-				setColor();
+				setColor(color);
 			}
 		}
 
@@ -193,7 +231,7 @@ int main(void) {
 				if (speed > 0x80) {
 					speed = 0;
 				}
-				// Blink LED to show speed: 1 = Fast, 2 = Med, 3 = Slow
+				// Blink LED to show color change speed: 1 = Fast, 2 = Med, 3 = Slow
 				cli();
 				for (temp = (speed >> 6) + 1; temp > 0; temp--) {
 					PORTB = 0x00;
@@ -211,7 +249,7 @@ int main(void) {
 				if (!color) {
 					color += 1;
 				}
-				setColor();
+				setColor(color);
 			}
 		}
 	}
