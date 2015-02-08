@@ -1,5 +1,5 @@
  /*
-    Copyright (c) 2010  Art Dahm (art@dahm.com)                  
+    Copyright (c) 2010-1014  Art Dahm (art@dahm.com)                  
 
  Permission is hereby granted, free of charge, to any
  person obtaining a copy of this software and associated
@@ -79,8 +79,6 @@ void setColor(uint8_t); // Turn each of the RGB LEDs on or off
 
 ISR(TIMER0_OVF_vect)	//timer 0 interrupt for the pwm core.
 {
-	uint8_t temp;
-
 	static uint8_t count;	// PWM count
 	uint8_t out;		// Value to output to Port B
 
@@ -88,9 +86,9 @@ ISR(TIMER0_OVF_vect)	//timer 0 interrupt for the pwm core.
 	out = 0;
 
 	// Turn pin on or off for each PWM
-	for(temp = 0; temp < NUMBER_OF_PWMS; temp++) {
-		if(pwms[temp] <= count) {
-			 out |= _BV(temp);
+	for(uint8_t i = 0; i < NUMBER_OF_PWMS; i++) {
+		if(pwms[i] <= count) {
+			 out |= _BV(i);
 		}
 	}
 
@@ -154,7 +152,6 @@ int main(void) {
 
   uint8_t newpwms[NUMBER_OF_PWMS];	// Colors to work towards
 	uint8_t done;											// Count the number of PWMs that have reached newpwms. 3 = done
-	uint8_t temp;
 
 	// Set up data direction register for Port B
 	DDRB |= 0b00000111;
@@ -165,8 +162,8 @@ int main(void) {
 	TIMSK |= (1 << TOIE0);
 
 	// Set starting color
-	for(temp=0; temp < NUMBER_OF_PWMS; temp++) {
-		pwms[temp] = newpwms[temp] = 255;
+	for(uint8_t i=0; i < NUMBER_OF_PWMS; i++) {
+		pwms[i] = newpwms[i] = 255;
 	}
 
 	// Initialize button registers and variables
@@ -185,15 +182,15 @@ int main(void) {
 			// initialize done variable
 			done = 0;
 
-			for(temp=0; temp < NUMBER_OF_PWMS; temp++) {
+			for(uint8_t i = 0; i < NUMBER_OF_PWMS; i++) {
 				// If this PWM has reached its new color increment done
-				if (pwms[temp] == newpwms[temp]) {
+				if (pwms[i] == newpwms[i]) {
 					done++;
 				// Move PWM towards its new color
-				} else if (pwms[temp] < newpwms[temp]) {
-					pwms[temp] += 1;
-				} else if (pwms[temp] > newpwms[temp]) {
-					pwms[temp] -= 1;
+				} else if (pwms[i] < newpwms[i]) {
+					pwms[i] += 1;
+				} else if (pwms[i] > newpwms[i]) {
+					pwms[i] -= 1;
 				}
 			}
 			
@@ -202,11 +199,11 @@ int main(void) {
 
 				// Pick a random color (other than black)
 				// Each pin is either on or off without all pins being off
-				done = (rand() % 6) + 1;
+				uint8_t randomColor = (rand() % 6) + 1;
 
 				// Set up PWMs for each pin
-				for(temp=0; temp < NUMBER_OF_PWMS; temp++) {
-						newpwms[temp] = ((done >> temp) & 0x01) * 255;
+				for(uint8_t i = 0; i < NUMBER_OF_PWMS; i++) {
+						newpwms[i] = ((randomColor >> i) & 0x01) * 255;
 				}
 			}
 		}
@@ -233,7 +230,7 @@ int main(void) {
 				}
 				// Blink LED to show color change speed: 1 = Fast, 2 = Med, 3 = Slow
 				cli();
-				for (temp = (speed >> 6) + 1; temp > 0; temp--) {
+				for (uint8_t i = (speed >> 6) + 1; i > 0; i--) {
 					PORTB = 0x00;
 					delay(BLINK_RATE);
 					PORTB = 0x07;
